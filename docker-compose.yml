@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      context: ../task-management-backend/task-management-backend
+      dockerfile: Dockerfile
+    image: task-management-backend:1
+    container_name: task-management-backend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: task-management-frontend:1
+    container_name: task-management-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

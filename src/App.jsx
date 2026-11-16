@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
-const API_URL = 'http://localhost:8080/api/tasks'
+const API_URL = '/api/tasks'
 
 function App() {
   const [tasks, setTasks] = useState([])
@@ -12,26 +12,36 @@ function App() {
 
   // Load tasks from Spring Boot backend
   useEffect(() => {
-    fetchTasks()
-  }, [])
+    let ignore = false
 
-  async function fetchTasks() {
-    try {
-      const response = await fetch(API_URL)
+    fetch(API_URL)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load tasks')
+        }
+        return response.json()
+      })
+      .then(data => {
+        if (!ignore) {
+          setTasks(data)
+          setError('')
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setError('Unable to connect to backend. Please check the server.')
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false)
+        }
+      })
 
-      if (!response.ok) {
-        throw new Error('Failed to load tasks')
-      }
-
-      const data = await response.json()
-      setTasks(data)
-      setError('')
-    } catch (err) {
-      setError('Unable to connect to backend. Please check the server.')
-    } finally {
-      setLoading(false)
+    return () => {
+      ignore = true
     }
-  }
+  }, [])
 
   // Add a new task
   async function addTask(e) {
@@ -56,10 +66,11 @@ function App() {
       }
 
       const addedTask = await response.json()
-      setTasks([...tasks, addedTask])
+
+      setTasks(previousTasks => [...previousTasks, addedTask])
       setNewTask('')
       setError('')
-    } catch (err) {
+    } catch {
       setError('Unable to add task. Please try again.')
     }
   }
@@ -87,11 +98,14 @@ function App() {
 
       const updatedTask = await response.json()
 
-      setTasks(tasks.map(item =>
-        item.id === id ? updatedTask : item
-      ))
+      setTasks(previousTasks =>
+        previousTasks.map(item =>
+          item.id === id ? updatedTask : item
+        )
+      )
+
       setError('')
-    } catch (err) {
+    } catch {
       setError('Unable to update task. Please try again.')
     }
   }
@@ -107,9 +121,12 @@ function App() {
         throw new Error('Failed to delete task')
       }
 
-      setTasks(tasks.filter(task => task.id !== id))
+      setTasks(previousTasks =>
+        previousTasks.filter(task => task.id !== id)
+      )
+
       setError('')
-    } catch (err) {
+    } catch {
       setError('Unable to delete task. Please try again.')
     }
   }
@@ -128,6 +145,7 @@ function App() {
           value={newTask}
           onChange={e => setNewTask(e.target.value)}
         />
+
         <button type="submit">Add Task</button>
       </form>
 
